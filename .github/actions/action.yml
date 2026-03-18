@@ -716,15 +716,10 @@ runs:
         echo "::group::Add ReSukiSU"
         cd "$KERNEL_PLATFORM_FOLDER"
         
-        # 使用 ReSukiSU 官方提供的安装脚本
-        # 这里默认接入 builtin 模式
         curl -LSs "https://raw.githubusercontent.com/ReSukiSU/ReSukiSU/main/kernel/setup.sh" | bash
         
-        # 记录版本信息（模拟你原脚本的记录方式）
-        # ReSukiSU 通常会自动处理 Makefile，这里我们手动标记以便后续打包命名
         echo "ReSukiSU" >> "${ARTIFACTS_FOLDER}/${OP_MODEL}_${OP_OS_VERSION}.txt"
         
-        # 获取 Commit Hash 
         cd KernelSU
         KSU_COMMIT_SHA=$(git rev-parse HEAD)
         echo "KSU_COMMIT_SHA=$KSU_COMMIT_SHA" >> $GITHUB_ENV
@@ -752,7 +747,7 @@ runs:
         echo "SUSVER=$susfs_version" >> $GITHUB_ENV
         echo "$susfs_version" >> "${ARTIFACTS_FOLDER}/${OP_MODEL}_${OP_OS_VERSION}.txt"
         echo "SusFS Version: $susfs_version"
-        
+
         cd "$COMMON_KERNEL_FOLDER"
 
         if [ "${{ env.ANDROID_VER }}" = "android15" ] && [ "${{ env.KERNEL_VER }}" = "6.6" ]; then
