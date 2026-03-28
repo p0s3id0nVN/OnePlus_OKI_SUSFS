@@ -744,20 +744,37 @@ runs:
         set -euo pipefail
         echo "::group::Add ReSukiSU"
         cd "$KERNEL_PLATFORM_FOLDER"
+        echo "Adding ReSukiSU..."
         
-        curl -LSs "https://raw.githubusercontent.com/ReSukiSU/ReSukiSU/main/kernel/setup.sh" | bash
-        
-        echo "ReSukiSU" >> "${ARTIFACTS_FOLDER}/${OP_MODEL}_${OP_OS_VERSION}.txt"
+        if [ "${{ inputs.ksu_branch_or_hash }}" = "" ]; then
+          curl --fail --location --proto '=https' -LSs "https://raw.githubusercontent.com/ReSukiSU/ReSukiSU/main/kernel/setup.sh" | bash -
+        else
+          curl --fail --location --proto '=https' -LSs "https://raw.githubusercontent.com/ReSukiSU/ReSukiSU/main/kernel/setup.sh" | bash -s "${{ inputs.ksu_branch_or_hash }}"
+        fi
         
         cd KernelSU
+        
+        BASE_VERSION=30700
+        KSU_VERSION=$(expr $(/usr/bin/git rev-list --count HEAD) "+" $BASE_VERSION)
+        
         KSU_COMMIT_SHA=$(git rev-parse HEAD)
         echo "KSU_COMMIT_SHA=$KSU_COMMIT_SHA" >> $GITHUB_ENV
-        cd ..
-        echo "CONFIG_KPM=y" >> common/arch/arm64/configs/gki_defconfig
-        echo "CONFIG_KALLSYMS=y" >> common/arch/arm64/configs/gki_defconfig
-        echo "CONFIG_KALLSYMS_ALL=y" >> common/arch/arm64/configs/gki_defconfig
-        echo "CONFIG_KPROBES=y" >> common/arch/arm64/configs/gki_defconfig
         
+        cd ..
+        
+        echo "Add ReSukiSU Configuration Settings"
+        cat >> "common/arch/arm64/configs/gki_defconfig" <<EOF
+        CONFIG_KPM=y
+        CONFIG_KALLSYMS=y
+        CONFIG_KALLSYMS_ALL=y
+        CONFIG_KPROBES=y
+        EOF
+        
+        echo "ReSukiSU" >> "${ARTIFACTS_FOLDER}/${OP_MODEL}_${OP_OS_VERSION}.txt"
+        echo "$KSU_VERSION" >> "${ARTIFACTS_FOLDER}/${OP_MODEL}_${OP_OS_VERSION}.txt"
+        echo "KSUVER=$KSU_VERSION" >> $GITHUB_ENV
+        
+        echo "ReSukiSU Version: $KSU_VERSION"
         echo "✅ ReSukiSU added (commit: ${KSU_COMMIT_SHA:0:8})"
         echo "::endgroup::"
 
