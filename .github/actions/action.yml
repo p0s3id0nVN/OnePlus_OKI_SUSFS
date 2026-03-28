@@ -675,7 +675,7 @@ runs:
             
             echo "❌ Failed, cleaning up..."
             rm -f "$file_name" 2>/dev/null
-            sleep $((attempt++ * 5))
+            sleep $((attempt++ * 10))
           done
           
           echo "💥 All attempts failed"
@@ -846,17 +846,18 @@ runs:
         fi
         
         case "$susfs_version" in
-          "v1.5.8")
-            cd "$KSU_FOLDER"
-            patch -p1 --forward --fuzz=3 < "$SUSFS_FOLDER/kernel_patches/KernelSU/10_enable_susfs_for_ksu.patch" || true
-            ;;
-          "v1.5.9"|"v1.5.10"|"v1.5.11"|"v1.5.12")
-            cd "$KSU_FOLDER"
-            patch -p1 --forward < "$SUSFS_FOLDER/kernel_patches/KernelSU/10_enable_susfs_for_ksu.patch" || true
-            ;;
-          "v2.0.0"|"v2.1.0")
-            cd "$KSU_FOLDER"
-            patch -p1 --forward < "$SUSFS_FOLDER/kernel_patches/KernelSU/10_enable_susfs_for_ksu.patch" || true
+          "v1.5.8"|"v1.5.9"|"v1.5.10"|"v1.5.11"|"v1.5.12"|"v2.0.0"|"v2.1.0")
+            if [ "${{ inputs.ksu_type }}" = "KSU" ]; then
+              cd "$KSU_FOLDER"
+              echo "Applying SUSFS patch for Original KSU..."
+              if [ "$susfs_version" = "v1.5.8" ]; then
+                patch -p1 --forward --fuzz=3 < "$SUSFS_FOLDER/kernel_patches/KernelSU/10_enable_susfs_for_ksu.patch" || true
+              else
+                patch -p1 --forward < "$SUSFS_FOLDER/kernel_patches/KernelSU/10_enable_susfs_for_ksu.patch" || true
+              fi
+            else
+              echo "ℹ️ Skipping KernelSU folder patch for ReSukiSU (Native support or incompatible)"
+            fi
             ;;
           *)
             echo "::error::Unsupported SUSFS version: $susfs_version"
@@ -876,7 +877,7 @@ runs:
         if [ "${{ env.ANDROID_VER }}" = "android15" ] && [ "${{ env.KERNEL_VER }}" = "6.6" ]; then
           if ! grep -qxF $'\tunsigned int nr_subpages = __PAGE_SIZE / PAGE_SIZE;' ./fs/proc/task_mmu.c; then
             echo "nr_subpages Line not found. Fake Patching!"
-            sed -i -e '/int ret = 0, copied = 0;/a \	unsigned int nr_subpages \= __PAGE_SIZE \/ PAGE_SIZE;' -e '/int ret = 0, copied = 0;/a \	pagemap_entry_t \*res = NULL;' ./fs/proc/task_mmu.c
+            sed -i -e '/int ret = 0, copied = 0;/a \  unsigned int nr_subpages \= __PAGE_SIZE \/ PAGE_SIZE;' -e '/int ret = 0, copied = 0;/a \  pagemap_entry_t \*res = NULL;' ./fs/proc/task_mmu.c
             fake_patched=1
           fi
           if ! grep -qxF '#include <linux/dma-buf.h>' ./fs/proc/base.c; then
