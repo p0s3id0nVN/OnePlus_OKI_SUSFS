@@ -682,7 +682,7 @@ runs:
           return 1
         }
         
-        retry_clone "https://github.com/TheWildJames/AnyKernel3.git" "$ANYKERNEL_BRANCH"
+        retry_clone "https://github.com/coolzyd9107/AnyKernel3.git" "$ANYKERNEL_BRANCH"
         retry_clone "https://github.com/TheWildJames/kernel_patches.git"
 
         echo "Downloading SukiSU_KernelPatch..."
