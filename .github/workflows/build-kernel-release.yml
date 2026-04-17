@@ -116,6 +116,15 @@ jobs:
           input="${{ inputs.op_model }}"
           ksu_type="${{ inputs.ksu_type }}"
           ksu_hash="${{ inputs.ksu_branch_or_hash }}"
+          if [ -z "$ksu_hash" ]; then
+              if [ "$ksu_type" = "KSUN" ]; then
+                  ksu_hash="dev"
+              else
+                  ksu_hash="main"
+              fi
+          fi
+          echo "KSU Type: $ksu_type"
+          echo "KSU Hash/Branch: $ksu_hash"
           
           echo "[" > matrix.json
           mapfile -t all_json_files < <(find configs/ -name "*.json" -print0 | xargs -0 -n1)
