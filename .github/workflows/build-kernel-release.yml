@@ -116,6 +116,7 @@ jobs:
           if [ "$ksu_type" == "KSUN" ]; then
             if [ -z "$ksu_hash" ] || [ "$ksu_hash" == "main" ]; then
               ksu_hash="dev"
+              ksu_type"ksun"
             fi
           else
             if [ -z "$ksu_hash" ] || [ "$ksu_hash" == "dev" ]; then
