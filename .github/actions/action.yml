@@ -1941,10 +1941,16 @@ runs:
         
         sed -i 's/do.check_boot_version=.*/do.check_boot_version=1/' anykernel.sh
         
-        if [ "${{ env.OP_SUSFS }}" = true ]; then
-          ZIP_NAME="AK3_${OP_MODEL}_${OP_OS_VERSION}_${KERNEL_FULL_VER}_${{ inputs.ksu_type }}_${KSUVER:-unknown}_SuSFS_${SUSVER:-unknown}.zip"
+        if [ "$OP_MODEL" = "OP12" ] && [ "$OP_OS_VERSION" = "OOS16" ]; then
+          MODEL_OS="X7U_COS16"
         else
-          ZIP_NAME="AK3_${OP_MODEL}_${OP_OS_VERSION}_${KERNEL_FULL_VER}_${{ inputs.ksu_type }}_${KSUVER:-unknown}.zip"
+          MODEL_OS="${OP_MODEL}_${OP_OS_VERSION}"
+        fi
+        
+        if [ "${{ env.OP_SUSFS }}" = true ]; then
+          ZIP_NAME="AK3_${MODEL_OS}_${KERNEL_FULL_VER}_${{ inputs.ksu_type }}_${KSUVER:-unknown}_SuSFS_${SUSVER:-unknown}.zip"
+        else
+          ZIP_NAME="AK3_${MODEL_OS}_${KERNEL_FULL_VER}_${{ inputs.ksu_type }}_${KSUVER:-unknown}.zip"
         fi
         mkdir -p "$ARTIFACTS_FOLDER"
         

@@ -974,7 +974,11 @@ jobs:
           
           ### 🔐 Root Management
           EOF
-          if [ "$ksu_type" == "KSUN" ]; then
+          if [ "$ksu_type" == "ReSukiSU" ]; then
+            cat << EOF >> release_notes.md
+          - **ReSukiSU** - Kernel-based Android Root Solution,forked from sukisu
+          EOF
+          elif [ "$ksu_type" == "KSUN" ]; then
             cat << EOF >> release_notes.md
           - **KernelSU Next** - Next-generation kernel-level root solution
           EOF

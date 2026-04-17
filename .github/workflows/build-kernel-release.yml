@@ -845,7 +845,7 @@ jobs:
             <<< "${{ needs.set-op-model.outputs.active_gki_keys }}"
           
           cat << EOF > release_notes.md
-          # 🎯 OKI Kernels with $KSU_TYPE & SUSFS $SUSFS_BASE_VERSION
+          # 🎯 OKI Kernels with $ksu_type & SUSFS $SUSFS_BASE_VERSION
           
           > **Build Date:** $(date -u '+%Y-%m-%d %H:%M:%S UTC')  
           > **Build ID:** \`${{ github.run_id }}\`  
@@ -943,9 +943,9 @@ jobs:
           }
           
           ksu_display=$(ksu_display_value "$ksu_ref" "$ksu_resolved_hash")
-          if [ "$KSU_TYPE" = "ReSukiSU" ]; then
+          if [ "$ksu_type" = "ReSukiSU" ]; then
             cat << EOF >> release_notes.md
-          | **ReSukiSU Branch/Hash** | \`$KSU_BRANCH\` |
+          | **ReSukiSU Branch/Hash** | \`$ksu_display\` |
           | **ReSukiSU Version** | \`$ksu_ver_global\` |
           EOF
           elif [ "$ksu_type" == "KSUN" ]; then
@@ -1001,12 +1001,11 @@ jobs:
           cat << EOF >> release_notes.md
           - **SUSFS $SUSFS_BASE_VERSION** - Advanced hiding and security features
           EOF
-          elif [ "$ksu_type" == "KSUN" ] && [ "${ksu_ver_global:-0}" -lt 12884 ]; then
+          if [ "$ksu_type" == "KSUN" ] && [ "${ksu_ver_global:-0}" -lt 12884 ]; then
             cat << EOF >> release_notes.md
           - **Magic Mount Support** - Seamless file system modifications
           EOF
           fi
-          
           if [ "${ksu_ver_global:-0}" -lt 12884 ]; then
             cat << EOF >> release_notes.md
           - **Manual Hooks** - scope_min_manual_hooks_v1.4 for better compatibility
