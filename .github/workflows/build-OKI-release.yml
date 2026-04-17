@@ -1177,7 +1177,7 @@ jobs:
           
           ━━━━━━━━━━━━━━━━━━
           👉 <a href=\"${{ github.server_url }}/${{ github.repository }}/releases/tag/${{ env.NEW_TAG }}\"><b>📥 GET YOUR KERNEL HERE</b></a>
-          📢 <a href=\"https://t.me/huangdihd_wildkernel\"><b>JOIN TELEGRAM CHANNEL</b></a>"
+          📢 <a href=\"https://t.me/+xuaucg-mba02NDY1\"><b>JOIN TELEGRAM CHANNEL</b></a>"
           
           # Split TG_CHAT_ID by comma or space
           IFS=' ,' read -r -a CHAT_IDS <<< "$TG_CHAT_ID"
