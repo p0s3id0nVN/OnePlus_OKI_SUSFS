@@ -41,7 +41,7 @@ on:
       ksu_branch_or_hash:
         description: 'KSU branch or commit hash'
         type: string
-        default: 'main'
+        default: ''
       optimize_level:
         description: "Compiler optimization level"
         required: true
@@ -107,27 +107,21 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          echo "::group::Matrix generation"
+          echo "::group::Matrix generation"         
           
-          # 1. Lấy giá trị trực tiếp từ inputs
           input="${{ inputs.op_model }}"
           ksu_type="${{ inputs.ksu_type }}"
           ksu_hash="${{ inputs.ksu_branch_or_hash }}"
-          
-          # 2. Xử lý logic tự động chọn branch/hash
-          if [ "$ksu_type_input" = "KSUN" ]; then
-            # Nếu là KSUN: đổi type thành chữ thường và hash là dev
-            ksu_type="ksun"
-            ksu_hash="dev"
+
+          if [ "$ksu_type" == "KSUN" ]; then
+            if [ -z "$ksu_hash" ] || [ "$ksu_hash" == "main" ]; then
+              ksu_hash="dev"
+            fi
           else
-            # Ngược lại: giữ nguyên type (hoặc tùy biến) và hash là main
-            ksu_type="${{ inputs.ksu_type }}"
-            ksu_hash="main"
+            if [ -z "$ksu_hash" ] || [ "$ksu_hash" == "dev" ]; then
+              ksu_hash="main"
+            fi
           fi
-          
-          # 3. Xuất kết quả ra GITHUB_ENV để các bước sau (Sync/Patch) sử dụng
-          echo "ksu_type=$ksu_type" >> $GITHUB_ENV
-          echo "ksu_hash=$ksu_hash" >> $GITHUB_ENV
           
           echo "[" > matrix.json
           mapfile -t all_json_files < <(find configs/ -name "*.json" -print0 | xargs -0 -n1)
