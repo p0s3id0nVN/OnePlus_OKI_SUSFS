@@ -779,28 +779,28 @@ runs:
           return 1
         }
 
-        retry_download() {
-          local url="$1"
-          local file_name="$2"
-          local max_attempts=3
-          local attempt=1
+        # retry_download() {
+        #   local url="$1"
+        #   local file_name="$2"
+        #   local max_attempts=3
+        #   local attempt=1
           
-          while [ $attempt -le $max_attempts ]; do
-            echo "🔄 Attempt $attempt/$max_attempts: downloading $url"
+        #   while [ $attempt -le $max_attempts ]; do
+        #     echo "🔄 Attempt $attempt/$max_attempts: downloading $url"
             
-            wget "$url" -O "$file_name" && {
-              echo "✅ Success"
-              return 0
-            }
+        #     wget "$url" -O "$file_name" && {
+        #       echo "✅ Success"
+        #       return 0
+        #     }
             
-            echo "❌ Failed, cleaning up..."
-            rm -f "$file_name" 2>/dev/null
-            sleep $((attempt++ * 5))
-          done
+        #     echo "❌ Failed, cleaning up..."
+        #     rm -f "$file_name" 2>/dev/null
+        #     sleep $((attempt++ * 5))
+        #   done
           
-          echo "💥 All attempts failed"
-          return 1
-        }
+        #   echo "💥 All attempts failed"
+        #   return 1
+        # }
         
         retry_clone "https://github.com/p0s3id0nVN/AnyKernel30" "$ANYKERNEL_BRANCH"
         # Đổi tên thư mục từ AnyKernel30 thành AnyKernel3
@@ -810,17 +810,17 @@ runs:
         fi
         retry_clone "https://github.com/TheWildJames/kernel_patches.git"
 
-        echo "Downloading SukiSU_KernelPatch..."
-        PATCH_URL=$(curl -sSL -H "Authorization: Bearer ${{ github.token }}" https://api.github.com/repos/SukiSU-Ultra/SukiSU_KernelPatch_patch/releases/latest | grep "browser_download_url" | grep "patch_linux" | cut -d '"' -f 4 | head -n 1)
+        # echo "Downloading SukiSU_KernelPatch..."
+        # PATCH_URL=$(curl -sSL -H "Authorization: Bearer ${{ github.token }}" https://api.github.com/repos/SukiSU-Ultra/SukiSU_KernelPatch_patch/releases/latest | grep "browser_download_url" | grep "patch_linux" | cut -d '"' -f 4 | head -n 1)
         
-        if [ -z "$PATCH_URL" ]; then
-          echo "::error::Failed to fetch the SukiSU_KernelPatch download link! The API might be rate-limited or the repository is inaccessible."
-          exit 1
-        fi
+        # if [ -z "$PATCH_URL" ]; then
+        #   echo "::error::Failed to fetch the SukiSU_KernelPatch download link! The API might be rate-limited or the repository is inaccessible."
+        #   exit 1
+        # fi
         
-        echo "✅ Successfully fetched patch URL: $PATCH_URL"
-        retry_download "$PATCH_URL" "patch_linux"
-        chmod +x patch_linux
+        # echo "✅ Successfully fetched patch URL: $PATCH_URL"
+        # retry_download "$PATCH_URL" "patch_linux"
+        # chmod +x patch_linux
         
         if [ "${{ env.OP_SUSFS }}" = true ]; then
           retry_clone "https://gitlab.com/simonpunk/susfs4ksu.git" "master" 0
@@ -944,25 +944,14 @@ runs:
         else
           curl --fail --location --proto '=https' -LSs "https://raw.githubusercontent.com/tiann/KernelSU/main/kernel/setup.sh" | bash -s "$KSU_INPUT"
         fi
-        
         git submodule update --init --recursive
         cd KernelSU/kernel
-        
         BASE_VERSION=30000
         KSU_VERSION=$(expr $(/usr/bin/git rev-list --count HEAD) "+" $BASE_VERSION)
-        
-        if grep -q "DKSU_VERSION=16" Makefile; then
-          sed -i "s/DKSU_VERSION=16/DKSU_VERSION=${KSU_VERSION}/" Makefile
-        fi
+        sed -i "s/DKSU_VERSION=16/DKSU_VERSION=${KSU_VERSION}/" Makefile
         
         if [ -f ksu.c ]; then
-          echo "ℹ️ Found ksu.c, applying legacy stackprotector patch..."
           sed -i 's/#if defined(CONFIG_STACKPROTECTOR) && (defined(CONFIG_ARM64) && !defined(CONFIG_STACKPROTECTOR_PER_TASK))/#if 0/' ksu.c
-        elif [ -f core.c ]; then
-          echo "ℹ️ Found core.c, applying stackprotector patch to new structure..."
-          sed -i 's/#if defined(CONFIG_STACKPROTECTOR) && (defined(CONFIG_ARM64) && !defined(CONFIG_STACKPROTECTOR_PER_TASK))/#if 0/' core.c
-        else
-          echo "ℹ️ Modern KSU structure detected, skipping legacy stackprotector patch."
         fi
         
         echo "NEED_HOOKS=false" >> $GITHUB_ENV
