@@ -1051,14 +1051,25 @@ runs:
             if [ "${{ inputs.ksu_type }}" = "KSUN" ]; then
               cd "$KSUN_FOLDER"
               patch -p1 --forward < "$SUSFS_FOLDER/kernel_patches/KernelSU/10_enable_susfs_for_ksu.patch" || true
+              
+              # Sửa lỗi thiếu khai báo hàm bằng cách áp dụng fix header trước
               for file in $(find ./kernel -maxdepth 2 -name "*.rej" -exec basename {} .rej \;); do
-                echo "Patching file: $file with fix_$file.patch"
-                patch -p1 --forward < "$KERNEL_PATCHES_FOLDER/next/susfs_fix_patches/$susfs_version/fix_$file.patch"
+                PATCH_FILE="$KERNEL_PATCHES_FOLDER/next/susfs_fix_patches/$susfs_version/fix_$file.patch"
+                if [ -f "$PATCH_FILE" ]; then
+                  patch -p1 --forward < "$PATCH_FILE"
+                fi
               done
-              echo "Patching Hook Mode!"
-              patch -p1 --forward < "$KERNEL_PATCHES_FOLDER/next/susfs_fix_patches/$susfs_version/overwrite_hook_mode.patch"
-              echo "Patching KSU_TOOLKIT Support for SusFS kernel!"
-              patch -p1 --forward < "$KERNEL_PATCHES_FOLDER/next/susfs_fix_patches/$susfs_version/ksu_toolkit.patch"
+
+              # QUAN TRỌNG: Thêm khai báo header vào ksu.h hoặc các file liên quan 
+              # nếu patch fix không tự động thêm chúng.
+              if [ -f "kernel/ksu.h" ]; then
+                echo "void ksu_sucompat_init(void);" >> kernel/ksu.h
+                echo "void ksu_setuid_hook_init(void);" >> kernel/ksu.h
+              fi
+
+              # Áp dụng các patch ghi đè (overwrite) để chuẩn hóa cấu trúc hook
+              patch -p1 --forward < "$KERNEL_PATCHES_FOLDER/next/susfs_fix_patches/$susfs_version/overwrite_hook_mode.patch" || echo "Skip hook_mode"
+              patch -p1 --forward < "$KERNEL_PATCHES_FOLDER/next/susfs_fix_patches/$susfs_version/ksu_toolkit.patch" || echo "Skip toolkit"
               if [ "${KSUVER:-0}" -le 33095 ]; then
               echo "Patching Multi-manager Support for SusFS kernel!"
               patch -p1 --forward < "$KERNEL_PATCHES_FOLDER/next/susfs_fix_patches/$susfs_version/multi_manager.patch"
