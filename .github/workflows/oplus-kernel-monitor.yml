@@ -333,7 +333,7 @@ jobs:
         run: |
           gh label create "notification" --color "BFD4F2" --repo ${{ github.repository }} --force || true
           DATE_TITLE="Kernel Updates - $(date +'%Y-%m-%d')"
-          ISSUE_NUMBER=$(gh issue list --repo ${{ github.repository }} --label "notification" --state "open" --search "$DATE_TITLE" --json number --jq '.[0].number')
+          ISSUE_NUMBER=$(gh issue list --repo ${{ github.repository }} --label "notification" --state "open" --search "$DATE_TITLE" --json number --jq '.[0].number' || echo "")
           RUN_URL="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
           
           if [[ "${{ github.repository_owner }}" != "WildKernels" ]]; then
@@ -344,10 +344,10 @@ jobs:
           
           if [ -z "$ISSUE_NUMBER" ]; then
             BODY=$(printf "Hi $TARGET,\n\nTracker for today.\n\n${{ steps.scanner.outputs.log_content }}\n\n---\n🔗 [View Action Summary]($RUN_URL)")
-            gh issue create --repo ${{ github.repository }} --title "$DATE_TITLE" --body "$BODY" --label "notification"
+            gh issue create --repo ${{ github.repository }} --title "$DATE_TITLE" --body "$BODY" --label "notification" || echo "⚠️ Tính năng Issues đang tắt. Đang bỏ qua tạo."
           else
             BODY=$(printf "### 🔄 New Activity Detected ($(date -u +'%H:%M') UTC)\n\n${{ steps.scanner.outputs.log_content }}\n\n---\n🔗 [View Action Summary]($RUN_URL)")
-            gh issue comment $ISSUE_NUMBER --repo ${{ github.repository }} --body "$BODY"
+            gh issue comment $ISSUE_NUMBER --repo ${{ github.repository }} --body "$BODY" || echo "⚠️ Tính năng Issues đang tắt. Đang bỏ qua bình luận."
           fi
 
       - name: Update Status Branch README
