@@ -1180,6 +1180,10 @@ runs:
         echo "CONFIG_BBG=y" >> common/arch/arm64/configs/gki_defconfig
         sed -i '/^config LSM$/,/^help$/{ /^[[:space:]]*default/ { /baseband_guard/! s/selinux/selinux,baseband_guard/ } }' common/security/Kconfig
         
+        if grep -qxF $'\t\tconst char* symlink_target_link = inode->i_op->get_link(dentry, inode, NULL);' ./Baseband-guard/baseband_guard.c; then
+          echo "Applying BBG get_link fix"
+          patch -p1 --forward < "$KERNEL_PATCHES_FOLDER/experimental/bbg/bbg_fix_get_link.patch"
+        fi
         echo "✅ BBG LSM added"
         echo "::endgroup::"
 
@@ -1448,6 +1452,24 @@ runs:
 
         echo "✅ Dynamic USB DWC3 configs added"
         echo "::endgroup::"
+
+    - name: Add LXC / Droidspaces support
+      shell: bash
+      if: ${{ env.OP_LXC_DS == 'true' }}
+      run: |
+        set -euo pipefail
+        echo "Add Droidspaces Support"
+        cd "$COMMON_KERNEL_FOLDER"
+        
+        echo "Applying patch to enable SYSVIPC without breaking ABI"
+        patch -p1 -F3 --forward < "$KERNEL_PATCHES_FOLDER/oneplus/lxc_droidspaces/enable_sysvipc.patch"
+        
+        cat >> "$COMMON_KERNEL_FOLDER/arch/arm64/configs/gki_defconfig" <<EOF
+        CONFIG_SYSVIPC = y
+        CONFIG_DEVTMPFS = y
+        CONFIG_PID_NS = y
+        CONFIG_POSIX_MQUEUE = y
+        EOF
 
     - name: Add Droidspaces support
       shell: bash
@@ -1746,7 +1768,8 @@ runs:
         echo "BUILD_END=$BUILD_END" >> "$GITHUB_ENV"
         echo "BUILD_TIME=$BUILD_TIME" >> "$GITHUB_ENV"
         
-        IMG="$OUT/arch/arm64/boot/Image"
+        BOOT_DIR="$OUT/arch/arm64/boot"
+        IMG="$BOOT_DIR/Image"
         if [ ! -f "$IMG" ]; then
           echo "::error::Kernel Image missing"
           echo "::group::Last 100 lines of build log"
