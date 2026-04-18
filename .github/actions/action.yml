@@ -1050,44 +1050,44 @@ runs:
           "v2.1.0")
             if [ "${{ inputs.ksu_type }}" = "KSUN" ]; then
               cd "$KSUN_FOLDER"
+              # Apply patch chính, không dừng nếu có reject để xử lý ở bước sau
               patch -p1 --forward < "$SUSFS_FOLDER/kernel_patches/KernelSU/10_enable_susfs_for_ksu.patch" || true
               
-              # Sửa lỗi thiếu khai báo hàm bằng cách áp dụng fix header trước
+              # Xử lý các file bị reject bằng các bản fix có sẵn
               for file in $(find ./kernel -maxdepth 2 -name "*.rej" -exec basename {} .rej \;); do
                 PATCH_FILE="$KERNEL_PATCHES_FOLDER/next/susfs_fix_patches/$susfs_version/fix_$file.patch"
                 if [ -f "$PATCH_FILE" ]; then
+                  echo "✅ Applying fix for $file..."
                   patch -p1 --forward < "$PATCH_FILE"
+                else
+                  echo "⚠️ No fix patch found for $file, checking headers..."
                 fi
               done
 
-              # QUAN TRỌNG: Thêm khai báo header vào ksu.h hoặc các file liên quan 
-              # nếu patch fix không tự động thêm chúng.
+              # QUAN TRỌNG: Đảm bảo header ksu.h có khai báo để tránh lỗi 'undeclared function'
+              # Chèn vào đầu file sau dòng #define để đảm bảo tính hợp lệ
               if [ -f "kernel/ksu.h" ]; then
-                echo "void ksu_sucompat_init(void);" >> kernel/ksu.h
-                echo "void ksu_setuid_hook_init(void);" >> kernel/ksu.h
+                sed -i '/#define __KSU_H__/a void ksu_sucompat_init(void);\nvoid ksu_setuid_hook_init(void);' kernel/ksu.h
               fi
 
-              # Áp dụng các patch ghi đè (overwrite) để chuẩn hóa cấu trúc hook
+              # Áp dụng các patch bổ trợ, dùng || true để tránh gãy build nếu source đã có sẵn code này
               patch -p1 --forward < "$KERNEL_PATCHES_FOLDER/next/susfs_fix_patches/$susfs_version/overwrite_hook_mode.patch" || echo "Skip hook_mode"
               patch -p1 --forward < "$KERNEL_PATCHES_FOLDER/next/susfs_fix_patches/$susfs_version/ksu_toolkit.patch" || echo "Skip toolkit"
+              
               if [ "${KSUVER:-0}" -le 33095 ]; then
-              echo "Patching Multi-manager Support for SusFS kernel!"
-              patch -p1 --forward < "$KERNEL_PATCHES_FOLDER/next/susfs_fix_patches/$susfs_version/multi_manager.patch"
+                echo "Patching Multi-manager Support..."
+                patch -p1 --forward < "$KERNEL_PATCHES_FOLDER/next/susfs_fix_patches/$susfs_version/multi_manager.patch" || echo "Skip multi_manager"
               fi
+              
               if [ "${KSUVER:-0}" -ge 33068 ] && [ "${KSUVER:-0}" -lt 33070 ]; then
-                echo "Patching Multi-manager sepolicy Support for SusFS kernel!"
-                patch -p1 --forward < "$KERNEL_PATCHES_FOLDER/next/susfs_fix_patches/$susfs_version/multi_sepolicy_fix.patch"
+                echo "Patching Multi-manager sepolicy Support..."
+                patch -p1 --forward < "$KERNEL_PATCHES_FOLDER/next/susfs_fix_patches/$susfs_version/multi_sepolicy_fix.patch" || echo "Skip sepolicy_fix"
               fi
             else
               cd "$KSU_FOLDER"
               patch -p1 --forward < "$SUSFS_FOLDER/kernel_patches/KernelSU/10_enable_susfs_for_ksu.patch" || true
             fi
             ;;
-          *)
-            echo "::error::Unsupported SUSFS version: $susfs_version"
-            exit 1
-            ;;
-        esac
         
         cd "$COMMON_KERNEL_FOLDER"
         if [ "$ANDROID_VER" = "android15" ] && [ "$KERNEL_VER" = "6.6" ]; then
