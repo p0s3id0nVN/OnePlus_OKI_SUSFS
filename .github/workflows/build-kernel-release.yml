@@ -1237,24 +1237,24 @@ jobs:
           👉 <a href="${{ github.server_url }}/${{ github.repository }}/releases/tag/${{ env.NEW_TAG }}"><b>📥 TẢI VỀ TẠI ĐÂY </b></a>
           📢 <a href="https://t.me/+xuaucg-mba02NDY1"><b>JOIN TELEGRAM CHANNEL</b></a>
           EOF
-                    )
-                    
-                    IFS=' ,' read -r -a CHAT_IDS <<< "$TG_CHAT_ID"
-                    for ID in "${CHAT_IDS[@]}"; do
-                      [ -z "$ID" ] && continue
-                      
-                      # Sử dụng jq để tạo JSON payload an toàn (tự động escape các ký tự đặc biệt)
-                      PAYLOAD=$(jq -n --arg chat_id "$ID" --arg text "$MSG_TEXT" \
-                        '{chat_id: $chat_id, parse_mode: "HTML", disable_web_page_preview: true, text: $text}')
-                      
-                      RESPONSE=$(curl -s -X POST "https://api.telegram.org/bot${TG_BOT_TOKEN}/sendMessage" \
-                        -H "Content-Type: application/json" \
-                        -d "$PAYLOAD")
-                      
-                      if echo "$RESPONSE" | jq -e '.ok' > /dev/null; then
-                        echo "  ✅ Đã gửi thông báo thành công tới $ID"
-                      else
-                        echo "  ❌ Lỗi khi gửi tới $ID: $(echo "$RESPONSE" | jq -r '.description')"
-                      fi
-                    done
-                    echo "::endgroup::"
+          )
+          
+          IFS=' ,' read -r -a CHAT_IDS <<< "$TG_CHAT_ID"
+          for ID in "${CHAT_IDS[@]}"; do
+            [ -z "$ID" ] && continue
+            
+            # Sử dụng jq để tạo JSON payload an toàn (tự động escape các ký tự đặc biệt)
+            PAYLOAD=$(jq -n --arg chat_id "$ID" --arg text "$MSG_TEXT" \
+              '{chat_id: $chat_id, parse_mode: "HTML", disable_web_page_preview: true, text: $text}')
+            
+            RESPONSE=$(curl -s -X POST "https://api.telegram.org/bot${TG_BOT_TOKEN}/sendMessage" \
+              -H "Content-Type: application/json" \
+              -d "$PAYLOAD")
+            
+            if echo "$RESPONSE" | jq -e '.ok' > /dev/null; then
+              echo "  ✅ Đã gửi thông báo thành công tới $ID"
+            else
+              echo "  ❌ Lỗi khi gửi tới $ID: $(echo "$RESPONSE" | jq -r '.description')"
+            fi
+          done
+          echo "::endgroup::"
