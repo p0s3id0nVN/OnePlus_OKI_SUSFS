@@ -1202,6 +1202,7 @@ jobs:
           echo "::group::Telegram Notification"
           
           if [ -z "$TG_BOT_TOKEN" ] || [ -z "$TG_CHAT_ID" ]; then
+            echo "⚠️ Telegram secrets not configured. Skipping."
             echo "⚠️ Chưa cấu hình các secret của Telegram. Đang bỏ qua."
             exit 0
           fi
