@@ -8,12 +8,12 @@ on:
   workflow_dispatch:
     inputs:
       make_release:
-        description: 'Do you want to create a release?'
+        description: 'Tạo bản Release không?'
         required: true
         type: boolean
-        default: false
+        default: true
       op_model:
-        description: 'Select the OnePlus kernels to build'
+        description: 'Chọn OS kernels để build'
         required: true
         type: choice
         options:
@@ -30,7 +30,7 @@ on:
           - android12-5.10
         default: OOS16
       ksu_type:
-        description: 'Select KSU Type'
+        description: 'Chọn Loại KSU'
         required: true
         type: choice
         options:
@@ -39,7 +39,7 @@ on:
           - KSU
         default: ReSukiSU
       ksu_branch_or_hash:
-        description: 'KSU branch or commit hash'
+        description: 'KSU branch hoặc commit hash'
         type: string
         default: ''
       optimize_level:
@@ -53,27 +53,31 @@ on:
         type: boolean
         default: false
       build_timestamp:
-        description: 'Custom kernel build timestamp for uname -a (e.g. "Tue Feb 10 10:01:02 UTC 2026"). Leave empty for current time.'
+        description: 'Tùy chỉnh thời gian build kernel cho lệnh uname -a (VD: "Tue Feb 10 10:01:02 UTC 2026"). Để trống nếu muốn dùng thời gian hiện tại.'
         type: string
         default: ''
       android12-5_10_susfs_branch_or_commit:
-        description: 'Enter SusFS Branch or commit hash for android12-5.10'
+        description: 'Nhập Branch hoặc Commit hash cho android12-5.10'
+        type: string
+        default: ''
+      android13-5_15_susfs_branch_or_commit:
+        description: 'Nhập Branch hoặc Commit hash cho android13-5.15'
         type: string
         default: ''      
       android13-5_15_susfs_branch_or_commit:
-        description: 'Enter SusFS Branch or commit hash for android13-5.15'
+        description: 'Nhập Branch hoặc Commit hash cho android13-5.15'
         type: string
         default: ''      
       android14-6_1_susfs_branch_or_commit:
-        description: 'Enter SusFS Branch or commit hash for android14-6.1'
+        description: 'Nhập Branch hoặc Commit hash cho android14-6.1'
         type: string
         default: ''
       android15-6_6_susfs_branch_or_commit:
-        description: 'Enter SusFS Branch or commit hash for android15-6.6'
+        description: 'Nhập Branch hoặc Commit hash cho android15-6.6'
         type: string
         default: ''
       android16-6_12_susfs_branch_or_commit:
-        description: 'Enter SusFS Branch or commit hash for android16-6.12'
+        description: 'Nhập Branch hoặc Commit hash cho android16-6.12'
         type: string
         default: ''
 
@@ -102,7 +106,7 @@ jobs:
             configs/
           sparse-checkout-cone-mode: false
       
-      - name: 🔍 Generate build matrix
+      - name: 🔍 Tạo matrix build
         id: set-matrix
         shell: bash
         run: |
