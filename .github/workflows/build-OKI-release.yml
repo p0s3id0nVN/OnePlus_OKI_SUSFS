@@ -866,7 +866,7 @@ jobs:
               [[ "$ttl" == "true" ]] && features+=("🌐 TTL")
               [[ "$ip_set" == "true" ]] && features+="🧱 IP_SET & IPv6 NAT "
               [[ "$unicode" == "true" ]] && features+="🔧 Unicode Fix "
-              [[ "$ds" == "true" ]] && features+="💻 Droidspaces Support "
+              [[ "$ds" == "true" ]] && features+="💻 Droidspaces Support"
               [[ "$ntsync" == "true" ]] && features+="🔃 NTSync Support "
             fi
             
@@ -903,9 +903,9 @@ jobs:
           }
           
           ksu_display=$(ksu_display_value "$ksu_ref" "$ksu_resolved_hash")
-          if [ "$KSU_TYPE" = "ReSukiSU" ]; then
+          if [ "$ksu_type" = "ReSukiSU" ]; then
             cat << EOF >> release_notes.md
-          | **ReSukiSU Branch/Hash** | \`$KSU_BRANCH\` |
+          | **ReSukiSU Branch/Hash** | \`$ksu_display\` |
           | **ReSukiSU Version** | \`$ksu_ver_global\` |
           EOF
           elif [ "$ksu_type" == "KSUN" ]; then

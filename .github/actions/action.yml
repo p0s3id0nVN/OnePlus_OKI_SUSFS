@@ -10,7 +10,6 @@ inputs:
     required: true
     type: choice
     options:
-      - ReSukiSU
       - KSUN
       - KSU
   ksu_branch_or_hash:
@@ -357,7 +356,6 @@ runs:
         COMMON_KERNEL_DIR="$KERNEL_PLATFORM_DIR/common"
         MSM_KERNEL_DIR="$KERNEL_PLATFORM_DIR/msm-kernel"
         AK3_DIR="$GITHUB_WORKSPACE/AnyKernel3"
-        SUKISU_KERNEL_PATCH="$GITHUB_WORKSPACE/patch_linux"
         KERNEL_PATCHES_DIR="$GITHUB_WORKSPACE/kernel_patches"
         SUSFS_DIR="$GITHUB_WORKSPACE/susfs4ksu"
         KSU_DIR="$KERNEL_PLATFORM_DIR/KernelSU"
@@ -371,7 +369,6 @@ runs:
         echo "COMMON_KERNEL_FOLDER=$COMMON_KERNEL_DIR" >> "$GITHUB_ENV"
         echo "MSM_KERNEL_FOLDER=$MSM_KERNEL_DIR" >> "$GITHUB_ENV"
         echo "AK3_FOLDER=$AK3_DIR" >> "$GITHUB_ENV"
-        echo "SUKISU_KERNEL_PATCH=$SUKISU_KERNEL_PATCH" >> "$GITHUB_ENV"
         echo "KERNEL_PATCHES_FOLDER=$KERNEL_PATCHES_DIR" >> "$GITHUB_ENV"
         echo "SUSFS_FOLDER=$SUSFS_DIR" >> "$GITHUB_ENV"
         echo "KSU_FOLDER=$KSU_DIR" >> "$GITHUB_ENV"
@@ -626,10 +623,10 @@ runs:
       uses: actions/cache@v5
       with:
         path: ${{ env.CCACHE_DIR }}
-        key: ccache-kernel-v3-${{ env.OP_MODEL }}-${{ env.OP_OS_VERSION }}-${{ env.KERNEL_FULL_VER }}-${{ env.CLANG_VERSION_SHORT }}
+        key: ccache-ksun-v3-${{ env.OP_MODEL }}-${{ env.OP_OS_VERSION }}-${{ env.KERNEL_FULL_VER }}-${{ env.CLANG_VERSION_SHORT }}
         restore-keys: |
-          ccache-kernel-v3-${{ env.OP_MODEL }}-${{ env.OP_OS_VERSION }}-${{ env.KERNEL_FULL_VER }}-
-          ccache-kernel-v3-${{ env.OP_MODEL }}-${{ env.OP_OS_VERSION }}-
+          ccache-ksun-v3-${{ env.OP_MODEL }}-${{ env.OP_OS_VERSION }}-${{ env.KERNEL_FULL_VER }}-
+          ccache-ksun-v3-${{ env.OP_MODEL }}-${{ env.OP_OS_VERSION }}-
    
     - name: Configure ccache
       shell: bash
@@ -713,9 +710,9 @@ runs:
         echo "::group::Clone dependencies"
         echo "Cloning AnyKernel3 and other dependencies..."
         
-        ANYKERNEL_BRANCH="gki-2.0"
+         ANYKERNEL_BRANCH="gki-2.0"
         
-        if [ "$OP_SUSFS" = "true" ]; then
+        if [ "${{ env.OP_SUSFS }}" = true ]; then
           # Determine SUSFS branch/commit to use
           SUSFS_INPUT="${{ inputs.susfs_commit_hash_or_branch }}"
           
@@ -729,7 +726,7 @@ runs:
           )
           
           # Determine which SUSFS ref to use
-          KERNEL_KEY="${ANDROID_VER}-${KERNEL_VER}"
+          KERNEL_KEY="${{ env.ANDROID_VER }}-${{ env.KERNEL_VER }}"
           if [ -z "$SUSFS_INPUT" ]; then
             # use kernel-specific default
             SUSFS_BRANCH="${DEFAULT_SUSFS[$KERNEL_KEY]:-gki-android15-6.6}"
@@ -743,7 +740,7 @@ runs:
         
         echo "Using AnyKernel3 branch: $ANYKERNEL_BRANCH"
         
-        if [ "$OP_SUSFS" = "true" ]; then
+        if [ "${{ env.OP_SUSFS }}" = true ]; then
           echo "Using SUSFS branch/commit: $SUSFS_BRANCH"
         fi
         
@@ -778,29 +775,6 @@ runs:
           echo "💥 All attempts failed"
           return 1
         }
-
-        # retry_download() {
-        #   local url="$1"
-        #   local file_name="$2"
-        #   local max_attempts=3
-        #   local attempt=1
-          
-        #   while [ $attempt -le $max_attempts ]; do
-        #     echo "🔄 Attempt $attempt/$max_attempts: downloading $url"
-            
-        #     wget "$url" -O "$file_name" && {
-        #       echo "✅ Success"
-        #       return 0
-        #     }
-            
-        #     echo "❌ Failed, cleaning up..."
-        #     rm -f "$file_name" 2>/dev/null
-        #     sleep $((attempt++ * 5))
-        #   done
-          
-        #   echo "💥 All attempts failed"
-        #   return 1
-        # }
         
         retry_clone "https://github.com/p0s3id0nVN/AnyKernel30" "$ANYKERNEL_BRANCH"
         # Đổi tên thư mục từ AnyKernel30 thành AnyKernel3
@@ -810,19 +784,7 @@ runs:
         fi
         retry_clone "https://github.com/TheWildJames/kernel_patches.git"
 
-        # echo "Downloading SukiSU_KernelPatch..."
-        # PATCH_URL=$(curl -sSL -H "Authorization: Bearer ${{ github.token }}" https://api.github.com/repos/SukiSU-Ultra/SukiSU_KernelPatch_patch/releases/latest | grep "browser_download_url" | grep "patch_linux" | cut -d '"' -f 4 | head -n 1)
-        
-        # if [ -z "$PATCH_URL" ]; then
-        #   echo "::error::Failed to fetch the SukiSU_KernelPatch download link! The API might be rate-limited or the repository is inaccessible."
-        #   exit 1
-        # fi
-        
-        # echo "✅ Successfully fetched patch URL: $PATCH_URL"
-        # retry_download "$PATCH_URL" "patch_linux"
-        # chmod +x patch_linux
-        
-        if [ "$OP_SUSFS" = "true" ]; then
+        if [ "${{ env.OP_SUSFS }}" = true ]; then
           retry_clone "https://gitlab.com/simonpunk/susfs4ksu.git" "master" 0
           
           cd susfs4ksu
@@ -886,22 +848,22 @@ runs:
         git submodule update --init --recursive
         cd KernelSU-Next/kernel
         
-        COMMITS_COUNT=$(/usr/bin/git rev-list --count HEAD || echo 0)
+        COMMITS_COUNT=$(/usr/bin/git rev-list --count HEAD)
         
-        if [ "${COMMITS_COUNT:-0}" -lt 2684 ]; then
+        if [ $COMMITS_COUNT -lt 2684 ]; then
           BASE_VERSION=10200
         else
           BASE_VERSION=30000
         fi
         
-        KSU_VERSION=$(expr "${COMMITS_COUNT:-0}" "+" $BASE_VERSION)
+        KSU_VERSION=$(expr $COMMITS_COUNT "+" $BASE_VERSION)
         sed -i "s/DKSU_VERSION=11998/DKSU_VERSION=${KSU_VERSION}/" Makefile
         
         if [ -f ksu.c ]; then
           sed -i 's/#if defined(CONFIG_STACKPROTECTOR) && (defined(CONFIG_ARM64) && !defined(CONFIG_STACKPROTECTOR_PER_TASK))/#if 0/' ksu.c
         fi
         
-        if [ "${KSU_VERSION:-0}" -gt 33095 ] && [ "$KERNEL_VER" = "6.12" ]; then
+        if [[ "$KSU_VERSION" -gt 33095 ]] && [[ "${{ env.KERNEL_VER }}" == "6.12" ]]; then
           sed -i 's|ccflags-y += -I$(KSU_KERNEL_DIR) -I$(KSU_KERNEL_DIR)/include|ccflags-y += -I$(KSU_KERNEL_DIR) -I$(KSU_KERNEL_DIR)/include -I$(KSU_KERNEL_DIR)/include/uapi|' Kbuild
           sed -i 's|$(src)|$(abspath $(src))|' Kbuild
           sed -i 's|$(srctree)/$(src)|$(abspath $(srctree)/$(src))|' Kbuild
@@ -946,9 +908,8 @@ runs:
         fi
         git submodule update --init --recursive
         cd KernelSU/kernel
-        BASE_VERSION=30000
-        COMMITS_COUNT=$(/usr/bin/git rev-list --count HEAD || echo 0)
-        KSU_VERSION=$(expr "${COMMITS_COUNT:-0}" "+" $BASE_VERSION)
+        BASE_VERSION=20000
+        KSU_VERSION=$(expr $(/usr/bin/git rev-list --count HEAD) "+" $BASE_VERSION)
         sed -i "s/DKSU_VERSION=16/DKSU_VERSION=${KSU_VERSION}/" Makefile
         
         if [ -f ksu.c ]; then
@@ -1015,6 +976,7 @@ runs:
         echo "::group::Apply SUSFS patches"
         cd "$KERNEL_PLATFORM_FOLDER"
         echo "Applying SUSFS patches..."
+        apply_patch() { [ -f "$1" ] && patch -p1 --forward --fuzz=3 < "$1" || echo "::warning::Skipped missing patch: $1"; }
         cp "$SUSFS_FOLDER/kernel_patches/fs/"* "$COMMON_KERNEL_FOLDER/fs/"
         cp "$SUSFS_FOLDER/kernel_patches/include/linux/"* "$COMMON_KERNEL_FOLDER/include/linux/"
         
@@ -1252,77 +1214,79 @@ runs:
         cd "$COMMON_KERNEL_FOLDER"
         KERNEL_VERSION="$KERNEL_VER"
         MIN_VERSION="5.16"
+        apply_patch() { [ -f "$1" ] && patch -p1 --forward -F 3 < "$1" || echo "::warning::Skipped missing patch: $1"; }
+        
         if [ "$(printf '%s\n' "$KERNEL_VERSION" "$MIN_VERSION" | sort -V | head -n1)" = "$KERNEL_VERSION" ]; then
           echo "Patching ptrace!"
-          patch -p1 -F 3 < "$KERNEL_PATCHES_FOLDER/gki_ptrace.patch"
+          apply_patch "$KERNEL_PATCHES_FOLDER/gki_ptrace.patch"
         else
           echo "Kernel >= $MIN_VERSION, skipping ptrace patch"
         fi
-        if [ "$OP_HMBIRD" = true ]; then
+        if [ "$OP_HMBIRD" = "true" ]; then
           echo "Patching hmbird!"
-          dos2unix "$KERNEL_PATCHES_FOLDER/oneplus/hmbird/fengchi_${OP_MODEL}_${OP_OS_VERSION}.patch"
-          patch -p1 -F 3 < "$KERNEL_PATCHES_FOLDER/oneplus/hmbird/fengchi_${OP_MODEL}_${OP_OS_VERSION}.patch"
-          dos2unix "$KERNEL_PATCHES_FOLDER/oneplus/hmbird/overwriter.patch"
-          patch -p1 -F 3 < "$KERNEL_PATCHES_FOLDER/oneplus/hmbird/overwriter.patch"
-          chmod +x ./drivers/of/overwriter/overwrite_configs/convert_configs.sh
-          dos2unix "$KERNEL_PATCHES_FOLDER/oneplus/hmbird/hmbird_config.patch"
-          patch -p1 -F 3 < "$KERNEL_PATCHES_FOLDER/oneplus/hmbird/hmbird_config.patch"
+          [ -f "$KERNEL_PATCHES_FOLDER/oneplus/hmbird/fengchi_${OP_MODEL}_${OP_OS_VERSION}.patch" ] && dos2unix "$KERNEL_PATCHES_FOLDER/oneplus/hmbird/fengchi_${OP_MODEL}_${OP_OS_VERSION}.patch" || true
+          apply_patch "$KERNEL_PATCHES_FOLDER/oneplus/hmbird/fengchi_${OP_MODEL}_${OP_OS_VERSION}.patch"
+          [ -f "$KERNEL_PATCHES_FOLDER/oneplus/hmbird/overwriter.patch" ] && dos2unix "$KERNEL_PATCHES_FOLDER/oneplus/hmbird/overwriter.patch" || true
+          apply_patch "$KERNEL_PATCHES_FOLDER/oneplus/hmbird/overwriter.patch"
+          [ -f ./drivers/of/overwriter/overwrite_configs/convert_configs.sh ] && chmod +x ./drivers/of/overwriter/overwrite_configs/convert_configs.sh || true
+          [ -f "$KERNEL_PATCHES_FOLDER/oneplus/hmbird/hmbird_config.patch" ] && dos2unix "$KERNEL_PATCHES_FOLDER/oneplus/hmbird/hmbird_config.patch" || true
+          apply_patch "$KERNEL_PATCHES_FOLDER/oneplus/hmbird/hmbird_config.patch"
         else
           echo "Hmbird not enabled, skipping fengchi patch"
         fi
         
-        patch -p1 --forward < "$KERNEL_PATCHES_FOLDER/common/optimized_mem_operations.patch"
-        patch -p1 --forward < "$KERNEL_PATCHES_FOLDER/common/file_struct_8bytes_align.patch"
-        patch -p1 --forward < "$KERNEL_PATCHES_FOLDER/common/reduce_cache_pressure.patch"
+        apply_patch "$KERNEL_PATCHES_FOLDER/common/optimized_mem_operations.patch"
+        apply_patch "$KERNEL_PATCHES_FOLDER/common/file_struct_8bytes_align.patch"
+        apply_patch "$KERNEL_PATCHES_FOLDER/common/reduce_cache_pressure.patch"
         
-        patch -p1 --forward < "$KERNEL_PATCHES_FOLDER/common/mem_opt_prefetch.patch"
+        apply_patch "$KERNEL_PATCHES_FOLDER/common/mem_opt_prefetch.patch"
         
         if [ "$(printf '%s\n' "$KERNEL_VERSION" "$MIN_VERSION" | sort -V | tail -n1)" = "$KERNEL_VERSION" ]; then
-          patch -p1 --forward < "$KERNEL_PATCHES_FOLDER/common/optimise_memcmp.patch"
+          apply_patch "$KERNEL_PATCHES_FOLDER/common/optimise_memcmp.patch"
         elif [ "$(printf '%s\n' "$KERNEL_VERSION" "5.11" | sort -V | tail -n1)" = "$KERNEL_VERSION" ]; then
-          sed -e 's/SYM_FUNC_START(__pi_memcmp)/SYM_FUNC_START_WEAK_PI(memcmp)/' -e 's/SYM_FUNC_END(__pi_memcmp)/SYM_FUNC_END_PI(memcmp)/' -e 's/SYM_FUNC_ALIAS_WEAK(memcmp, __pi_memcmp)/EXPORT_SYMBOL_NOKASAN(memcmp)/' "$KERNEL_PATCHES_FOLDER/common/optimise_memcmp.patch" | patch -p1 --forward
+          [ -f "$KERNEL_PATCHES_FOLDER/common/optimise_memcmp.patch" ] && sed -e 's/SYM_FUNC_START(__pi_memcmp)/SYM_FUNC_START_WEAK_PI(memcmp)/' -e 's/SYM_FUNC_END(__pi_memcmp)/SYM_FUNC_END_PI(memcmp)/' -e 's/SYM_FUNC_ALIAS_WEAK(memcmp, __pi_memcmp)/EXPORT_SYMBOL_NOKASAN(memcmp)/' "$KERNEL_PATCHES_FOLDER/common/optimise_memcmp.patch" | patch -p1 --forward || true
         else
           echo "Optimised memcmp patch not found!"
         fi
-        patch -p1 --forward < "$KERNEL_PATCHES_FOLDER/common/minimise_wakeup_time.patch"
-        patch -p1 --forward < "$KERNEL_PATCHES_FOLDER/common/int_sqrt.patch"
-        patch -p1 --forward < "$KERNEL_PATCHES_FOLDER/common/force_tcp_nodelay.patch"
-        patch -p1 --forward < "$KERNEL_PATCHES_FOLDER/common/reduce_gc_thread_sleep_time.patch"
-        patch -p1 --forward < "$KERNEL_PATCHES_FOLDER/common/add_timeout_wakelocks_globally.patch"
-        patch -p1 --forward < "$KERNEL_PATCHES_FOLDER/common/f2fs_reduce_congestion.patch"
-        patch -p1 --forward < "$KERNEL_PATCHES_FOLDER/common/reduce_freeze_timeout.patch"
+        apply_patch "$KERNEL_PATCHES_FOLDER/common/minimise_wakeup_time.patch"
+        apply_patch "$KERNEL_PATCHES_FOLDER/common/int_sqrt.patch"
+        apply_patch "$KERNEL_PATCHES_FOLDER/common/force_tcp_nodelay.patch"
+        apply_patch "$KERNEL_PATCHES_FOLDER/common/reduce_gc_thread_sleep_time.patch"
+        apply_patch "$KERNEL_PATCHES_FOLDER/common/add_timeout_wakelocks_globally.patch"
+        apply_patch "$KERNEL_PATCHES_FOLDER/common/f2fs_reduce_congestion.patch"
+        apply_patch "$KERNEL_PATCHES_FOLDER/common/reduce_freeze_timeout.patch"
         
         if [ "$(printf '%s\n' "$KERNEL_VERSION" "$MIN_VERSION" | sort -V | head -n1)" = "$KERNEL_VERSION" ]; then
-          patch -p1 --forward < "$KERNEL_PATCHES_FOLDER/common/clear_page_16bytes_align.patch"
+          apply_patch "$KERNEL_PATCHES_FOLDER/common/clear_page_16bytes_align.patch"
         else
-          cat "$KERNEL_PATCHES_FOLDER/common/clear_page_16bytes_align.patch" | sed -e 's/SYM_FUNC_START_PI(clear_page)/SYM_FUNC_START_PI(__pi_clear_page)/' | patch -p1 -F3 --forward
+          [ -f "$KERNEL_PATCHES_FOLDER/common/clear_page_16bytes_align.patch" ] && cat "$KERNEL_PATCHES_FOLDER/common/clear_page_16bytes_align.patch" | sed -e 's/SYM_FUNC_START_PI(clear_page)/SYM_FUNC_START_PI(__pi_clear_page)/' | patch -p1 -F3 --forward || true
         fi
         
         
         echo "Patching add_limitation_scaling_min_freq.patch"
-        patch -p1 -F3 --forward < "$KERNEL_PATCHES_FOLDER/common/add_limitation_scaling_min_freq.patch"
+        apply_patch "$KERNEL_PATCHES_FOLDER/common/add_limitation_scaling_min_freq.patch"
         echo "Patching re_write_limitation_scaling_min_freq.patch"
-        patch -p1 -F3 --forward < "$KERNEL_PATCHES_FOLDER/common/re_write_limitation_scaling_min_freq.patch"
+        apply_patch "$KERNEL_PATCHES_FOLDER/common/re_write_limitation_scaling_min_freq.patch"
         echo "Patching adjust_cpu_scan_order.patch"
-        patch -p1 -F3 --forward < "$KERNEL_PATCHES_FOLDER/common/adjust_cpu_scan_order.patch"
+        apply_patch "$KERNEL_PATCHES_FOLDER/common/adjust_cpu_scan_order.patch"
         echo "Patching avoid_extra_s2idle_wake_attempts.patch"
-        patch -p1 -F3 --forward < "$KERNEL_PATCHES_FOLDER/common/avoid_extra_s2idle_wake_attempts.patch"
+        apply_patch "$KERNEL_PATCHES_FOLDER/common/avoid_extra_s2idle_wake_attempts.patch"
         echo "Patching disable_cache_hot_buddy.patch"
-        patch -p1 -F3 --forward < "$KERNEL_PATCHES_FOLDER/common/disable_cache_hot_buddy.patch"
+        apply_patch "$KERNEL_PATCHES_FOLDER/common/disable_cache_hot_buddy.patch"
         echo "Patching f2fs_enlarge_min_fsync_blocks.patch"
-        patch -p1 -F3 --forward < "$KERNEL_PATCHES_FOLDER/common/f2fs_enlarge_min_fsync_blocks.patch"
+        apply_patch "$KERNEL_PATCHES_FOLDER/common/f2fs_enlarge_min_fsync_blocks.patch"
         echo "Patching increase_ext4_default_commit_age.patch"
-        patch -p1 -F3 --forward < "$KERNEL_PATCHES_FOLDER/common/increase_ext4_default_commit_age.patch"
+        apply_patch "$KERNEL_PATCHES_FOLDER/common/increase_ext4_default_commit_age.patch"
         echo "Patching increase_sk_mem_packets.patch"
-        patch -p1 -F3 --forward < "$KERNEL_PATCHES_FOLDER/common/increase_sk_mem_packets.patch"
+        apply_patch "$KERNEL_PATCHES_FOLDER/common/increase_sk_mem_packets.patch"
         echo "Patching reduce_pci_pme_wakeups.patch"
-        patch -p1 -F3 --forward < "$KERNEL_PATCHES_FOLDER/common/reduce_pci_pme_wakeups.patch"
+        apply_patch "$KERNEL_PATCHES_FOLDER/common/reduce_pci_pme_wakeups.patch"
         echo "Patching silence_irq_cpu_logspam.patch"
-        patch -p1 -F3 --forward < "$KERNEL_PATCHES_FOLDER/common/silence_irq_cpu_logspam.patch"
+        apply_patch "$KERNEL_PATCHES_FOLDER/common/silence_irq_cpu_logspam.patch"
         echo "Patching silence_system_logspam.patch"
-        patch -p1 -F3 --forward < "$KERNEL_PATCHES_FOLDER/common/silence_system_logspam.patch"
+        apply_patch "$KERNEL_PATCHES_FOLDER/common/silence_system_logspam.patch"
         echo "Patching use_unlikely_wrap_cpufreq.patch"
-        patch -p1 -F3 --forward < "$KERNEL_PATCHES_FOLDER/common/use_unlikely_wrap_cpufreq.patch"
+        apply_patch "$KERNEL_PATCHES_FOLDER/common/use_unlikely_wrap_cpufreq.patch"
         
         echo "✅ Other patches applied"
         echo "::endgroup::"
@@ -1361,9 +1325,9 @@ runs:
         fi
         
         echo "Patching $(basename $NTSYNC_PATCH)!"
-        patch -p1 --forward < "$NTSYNC_PATCH"
+        [ -f "$NTSYNC_PATCH" ] && patch -p1 --forward < "$NTSYNC_PATCH" || true
         echo "Patching ntsync_base!"
-        patch -p1 --forward < "$NTSYNC_FOLDER/ntsync_base.patch"
+        [ -f "$NTSYNC_FOLDER/ntsync_base.patch" ] && patch -p1 --forward < "$NTSYNC_FOLDER/ntsync_base.patch" || true
         cat >> "$COMMON_KERNEL_FOLDER/arch/arm64/configs/gki_defconfig" <<EOF
         CONFIG_NTSYNC=y
         EOF
@@ -1382,9 +1346,9 @@ runs:
         
         echo "Patching unicode!"
         if [ "$(printf '%s\n' "$KERNEL_VERSION" "$MIN_VERSION" | sort -V | head -n1)" = "$KERNEL_VERSION" ]; then
-            patch -p1 --forward < "$KERNEL_PATCHES_FOLDER/common/unicode_bypass_fix_6.1-.patch"
+            [ -f "$KERNEL_PATCHES_FOLDER/common/unicode_bypass_fix_6.1-.patch" ] && patch -p1 --forward < "$KERNEL_PATCHES_FOLDER/common/unicode_bypass_fix_6.1-.patch" || true
         else
-            patch -p1 --forward < "$KERNEL_PATCHES_FOLDER/common/unicode_bypass_fix_6.1+.patch"
+            [ -f "$KERNEL_PATCHES_FOLDER/common/unicode_bypass_fix_6.1+.patch" ] && patch -p1 --forward < "$KERNEL_PATCHES_FOLDER/common/unicode_bypass_fix_6.1+.patch" || true
         fi
 
     - name: Add Tmpfs Support
@@ -1463,7 +1427,7 @@ runs:
         CONFIG_IP6_NF_TARGET_MASQUERADE=y
         EOF
         
-        patch -p1 -F 3 < "$KERNEL_PATCHES_FOLDER/common/IPv6_NAT_FIX.patch"
+        [ -f "$KERNEL_PATCHES_FOLDER/common/IPv6_NAT_FIX.patch" ] && patch -p1 -F 3 < "$KERNEL_PATCHES_FOLDER/common/IPv6_NAT_FIX.patch" || true
     
     - name: Add USB DWC3 & OTG Support
       shell: bash
@@ -1510,10 +1474,10 @@ runs:
         echo "Applying patch to enable SYSVIPC without breaking ABI"
         case "$OP_BRANCH" in
           wild/sm8550|wild/sm7550)
-            patch -p1 --forward < "$KERNEL_PATCHES_FOLDER/common/droidspaces/fix_sysvipc_kabi_1_2_3.patch"
+            [ -f "$KERNEL_PATCHES_FOLDER/common/droidspaces/fix_sysvipc_kabi_1_2_3.patch" ] && patch -p1 --forward < "$KERNEL_PATCHES_FOLDER/common/droidspaces/fix_sysvipc_kabi_1_2_3.patch" || true
             ;;
           *)
-            patch -p1 --forward < "$KERNEL_PATCHES_FOLDER/common/droidspaces/fix_sysvipc_kabi_6_7_8.patch"
+            [ -f "$KERNEL_PATCHES_FOLDER/common/droidspaces/fix_sysvipc_kabi_6_7_8.patch" ] && patch -p1 --forward < "$KERNEL_PATCHES_FOLDER/common/droidspaces/fix_sysvipc_kabi_6_7_8.patch" || true
             ;;
         esac
         

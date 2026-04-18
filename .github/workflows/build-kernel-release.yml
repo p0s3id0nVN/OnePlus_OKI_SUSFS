@@ -34,7 +34,6 @@ on:
         required: true
         type: choice
         options:
-          - ReSukiSU
           - KSUN
           - KSU
         default: KSUN
@@ -90,6 +89,7 @@ jobs:
       susfs_hash_android15_6_6:  ${{ steps.set-matrix.outputs.susfs_hash_android15_6_6 }}
       susfs_hash_android16_6_12: ${{ steps.set-matrix.outputs.susfs_hash_android16_6_12 }}
       ksu_resolved_hash:    ${{ steps.set-matrix.outputs.ksu_resolved_hash }}
+      ksu_options_normalized: ${{ steps.set-matrix.outputs.ksu_options_normalized }}
       susfs_base_version: ${{ steps.set-matrix.outputs.susfs_base_version }}
     env:
       GH_TOKEN: ${{ github.token }}
@@ -204,13 +204,12 @@ jobs:
           
           ksu_type="${{ inputs.ksu_type }}"
           ksu_ref="$ksu_hash"
-          
-          if [ "$ksu_type" == "ReSukiSU" ]; then
-            KSU_REPO_OWNER="ReSukiSU"
-            KSU_REPO_NAME="ReSukiSU"
-          elif [ "$ksu_type" == "KSUN" ]; then
+          if [ "$ksu_type" == "KSUN" ]; then
             KSU_REPO_OWNER="KernelSU-Next"
             KSU_REPO_NAME="KernelSU-Next"
+          elif [ "$ksu_type" == "ReSukiSU" ]; then
+            KSU_REPO_OWNER="ReSukiSU"
+            KSU_REPO_NAME="ReSukiSU"
           else
             KSU_REPO_OWNER="tiann"
             KSU_REPO_NAME="KernelSU"
